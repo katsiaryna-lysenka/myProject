@@ -40,7 +40,7 @@ class Form1Serializer(serializers.ModelSerializer):
 
 
 class Form2Serializer(serializers.ModelSerializer):
-    organization = OrganizationSerializer()  # Nested serializer for organization
+    organization = OrganizationSerializer()
 
     class Meta:
         model = Form2
@@ -49,11 +49,16 @@ class Form2Serializer(serializers.ModelSerializer):
     def create(self, validated_data):
         organization_data = validated_data.pop('organization', None)
         if organization_data:
-            # Create or update the organization
-            organization, created = Organization.objects.update_or_create(
-                defaults=organization_data,  # Update if exists or create new
-                **organization_data  # Assuming ID is in the data for updating
-            )
+            organizations = Organization.objects.filter(name=organization_data['name'])
+            if organizations.exists():
+                organization = organizations.first()
+                if organizations.count() > 1:
+                    print(f"Multiple organizations found with name {organization_data['name']}, using the first one.")
+                for attr, value in organization_data.items():
+                    setattr(organization, attr, value)
+                organization.save()
+            else:
+                organization = Organization.objects.create(**organization_data)
         else:
             organization = None
 
@@ -65,12 +70,27 @@ class Form2Serializer(serializers.ModelSerializer):
         if organization_data:
             org_id = organization_data.get('id')
             if org_id:
-                organization = Organization.objects.get(id=org_id)
-                for attr, value in organization_data.items():
-                    setattr(organization, attr, value)
-                organization.save()
+                organizations = Organization.objects.filter(id=org_id)
+                if organizations.exists():
+                    organization = organizations.first()
+                    if organizations.count() > 1:
+                        print(f"Multiple organizations found with id {org_id}, using the first one.")
+                    for attr, value in organization_data.items():
+                        setattr(organization, attr, value)
+                    organization.save()
+                else:
+                    organization = Organization.objects.create(**organization_data)
             else:
-                organization = Organization.objects.create(**organization_data)
+                organizations = Organization.objects.filter(name=organization_data['name'])
+                if organizations.exists():
+                    organization = organizations.first()
+                    if organizations.count() > 1:
+                        print(f"Multiple organizations found with name {organization_data['name']}, using the first one.")
+                    for attr, value in organization_data.items():
+                        setattr(organization, attr, value)
+                    organization.save()
+                else:
+                    organization = Organization.objects.create(**organization_data)
             instance.organization = organization
 
         instance.start_date = validated_data.get('start_date', instance.start_date)

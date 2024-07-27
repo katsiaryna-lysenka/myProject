@@ -1,13 +1,14 @@
 from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from django.db.models import F, Value
+from django.db.models import Q
 from .models import Organization, UserProfile, Form1, Form2, Form3, SpecialistDismissalReport
 from .serializers import OrganizationSerializer, UserProfileSerializer, Form1Serializer, Form2Serializer, Form3Serializer
 from django.http import HttpResponse, Http404
 import xlsxwriter
 from io import BytesIO
 from django.shortcuts import render
+
 
 class OrganizationListCreateView(generics.ListCreateAPIView):
     queryset = Organization.objects.all()
@@ -64,11 +65,60 @@ class ChoosePeriodView(APIView):
         return render(request, 'report.html')
 
 
+def get_start_end_dates(period):
+    months = {
+        'январь': 1, 'февраль': 2, 'март': 3, 'апрель': 4,
+        'май': 5, 'июнь': 6, 'июль': 7, 'август': 8,
+        'сентябрь': 9, 'октябрь': 10, 'ноябрь': 11, 'декабрь': 12
+    }
+
+    parts = period.split('-')
+    if len(parts) != 2:
+        raise ValueError("Некорректный формат периода")
+
+    start_month_name = parts[0].strip()
+    end_month_name = parts[1].strip()
+
+    start_month = months.get(start_month_name)
+    end_month = months.get(end_month_name)
+
+    if start_month is None or end_month is None:
+        raise ValueError("Некорректное название месяца")
+
+    from datetime import datetime
+    current_year = datetime.now().year
+
+    start_date = f"{current_year}-{start_month:02d}-01"
+
+    import calendar
+    last_day = calendar.monthrange(current_year, end_month)[1]
+    end_date = f"{current_year}-{end_month:02d}-{last_day}"
+
+    return start_date, end_date
+
+
 class ExportExcelView(APIView):
     def get(self, request, format=None):
-        period = request.GET.get('period', 'январь-январь')
+        period = request.GET.get('period', 'январь-февраль')
 
-        form3_objects = Form3.objects.select_related('form1')
+        try:
+            start_date, end_date = get_start_end_dates(period)
+        except ValueError as e:
+            return HttpResponse(f"Ошибка: {str(e)}", status=400)
+
+        from datetime import datetime
+        try:
+            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
+            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+        except ValueError:
+            return HttpResponse("Ошибка формата даты.", status=400)
+
+        form2_objects = Form2.objects.filter(
+            Q(start_date__gte=start_date, end_date__lte=end_date) |
+            Q(start_date__lte=start_date, end_date__gte=end_date)
+        )
+
+        form3_objects = Form3.objects.filter(form2__in=form2_objects).select_related('form1')
 
         total_fields = {
             'total_young_specialists': 0,
@@ -100,8 +150,7 @@ class ExportExcelView(APIView):
             if form3.form1.article_name == 'направлен комиссией на основании':
                 total_fields['commission_referred_target'] += form3.distribution_count
                 total_fields['commission_referred_distribution'] += form3.target_distribution_count
-                total_fields[
-                    'commission_referred_total'] += form3.distribution_count + form3.target_distribution_count
+                total_fields['commission_referred_total'] += form3.distribution_count + form3.target_distribution_count
 
             if form3.form1.article_name == 'истечение срока обязательной отработки':
                 total_fields['term_expired_target'] += form3.distribution_count
@@ -116,8 +165,7 @@ class ExportExcelView(APIView):
             if form3.form1.article_name == 'поступление в учреждения образования':
                 total_fields['education_institution_target'] += form3.distribution_count
                 total_fields['education_institution_distribution'] += form3.target_distribution_count
-                total_fields[
-                    'education_institution_total'] += form3.distribution_count + form3.target_distribution_count
+                total_fields['education_institution_total'] += form3.distribution_count + form3.target_distribution_count
 
             if form3.form1.article_name == 'переезд в другую местность':
                 total_fields['relocation_target'] += form3.distribution_count
@@ -127,8 +175,7 @@ class ExportExcelView(APIView):
             if form3.form1.article_name == 'дискредитирующие обстоятельства':
                 total_fields['discrediting_circumstances_target'] += form3.distribution_count
                 total_fields['discrediting_circumstances_distribution'] += form3.target_distribution_count
-                total_fields[
-                    'discrediting_circumstances_total'] += form3.distribution_count + form3.target_distribution_count
+                total_fields['discrediting_circumstances_total'] += form3.distribution_count + form3.target_distribution_count
 
             if form3.form1.article_name == 'отсутствие жилья':
                 total_fields['housing_absence_target'] += form3.distribution_count
@@ -136,12 +183,10 @@ class ExportExcelView(APIView):
                 total_fields['housing_absence_total'] += form3.distribution_count + form3.target_distribution_count
 
             if form3.form1.article_name == 'Общая численность молодых специалистов(рабочих)':
-                total_fields[
-                    'total_young_specialists'] += form3.distribution_count + form3.target_distribution_count
+                total_fields['total_young_specialists'] += form3.distribution_count + form3.target_distribution_count
 
             if form3.form1.article_name == 'Количество уволенных молодых специалистов':
-                total_fields[
-                    'total_dismissed_specialists'] += form3.distribution_count + form3.target_distribution_count
+                total_fields['total_dismissed_specialists'] += form3.distribution_count + form3.target_distribution_count
 
         data = [{
             'organization_name': 'Итого',
