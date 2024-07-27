@@ -1,7 +1,10 @@
 from django.core.management.base import BaseCommand
 from datetime import date
 
-from core.models import Organization, UserProfile, Form1, Form2, Form3
+from django.db import IntegrityError
+from django.utils.dateparse import parse_date
+
+from core.models import Organization, UserProfile, Form1, Form2, Form3, SpecialistDismissalReport
 from django.contrib.auth.models import User
 
 
@@ -9,19 +12,24 @@ class Command(BaseCommand):
     help = 'Populate the database with test data'
 
     def handle(self, *args, **kwargs):
-        # Create test organization
-        Organization.objects.filter(name='Test Organization').delete()
 
-        # Create test organization
-        org = Organization.objects.create(name='Test Organization')
+        try:
+            Form1.objects.all().delete()
+            Form2.objects.all().delete()
+            Form3.objects.all().delete()
+            SpecialistDismissalReport.objects.all().delete()
+        except IntegrityError as e:
+            self.stdout.write(self.style.ERROR(f'Error while deleting data: {e}'))
+            return
+        org, created = Organization.objects.get_or_create(name='Test Organization')
 
-        # Check if user exists, if not create a new one
-        if not User.objects.filter(username='testuser').exists():
-            user = User.objects.create_user(username='testuser', password='password')
-        else:
-            user = User.objects.get(username='testuser')
+        user, created = User.objects.get_or_create(username='testuser', defaults={'password': 'password'})
+        if created:
+            user.set_password('password')
+            user.save()
 
-        # Create Form1 entries
+        Form1.objects.all().delete()
+
         form1_entries = [
             {'valid_until': '2100-01-01', 'article_name': 'направлен комиссией на основании', 'order': 2, 'modified_by': user},
             {'valid_until': '2100-01-01', 'article_name': 'истечение срока обязательной отработки', 'order': 4, 'modified_by': user},
@@ -41,21 +49,53 @@ class Command(BaseCommand):
         for entry in form1_entries:
             Form1.objects.create(**entry)
 
-        # Create Form2 entry
-        form2 = Form2.objects.create(
-            start_date=date(2024, 1, 1),
-            end_date=date(2024, 1, 31),
+        form2, created = Form2.objects.get_or_create(
+            start_date=parse_date('2024-01-01'),
+            end_date=parse_date('2024-01-31'),
             organization=org
         )
 
-        # Create Form3 entries
         for form1 in Form1.objects.all():
-            Form3.objects.create(
+            Form3.objects.get_or_create(
                 form1=form1,
                 form2=form2,
-                distribution_count=10,
-                target_distribution_count=5,
-                modified_by=user
+                defaults={
+                    'distribution_count': 10,
+                    'target_distribution_count': 5,
+                    'modified_by': user
+                }
             )
+
+        reports = [
+            {
+                'organization_name': 'Итого',
+                'total_young_specialists': 100,
+                'commission_referred_total': 10,
+                'commission_referred_target': 5,
+                'commission_referred_distribution': 5,
+                'total_dismissed_specialists': 15,
+                'term_expired_total': 6,
+                'term_expired_target': 2,
+                'term_expired_distribution': 4,
+                'military_service_total': 2,
+                'military_service_target': 2,
+                'military_service_distribution': 2,
+                'education_institution_total': 5,
+                'education_institution_target': 3,
+                'education_institution_distribution': 2,
+                'relocation_total': 2,
+                'relocation_target': 1,
+                'relocation_distribution': 1,
+                'discrediting_circumstances_total': 1,
+                'discrediting_circumstances_target': 0,
+                'discrediting_circumstances_distribution': 1,
+                'housing_absence_total': 1,
+                'housing_absence_target': 1,
+                'housing_absence_distribution': 0,
+            }
+        ]
+
+        for report in reports:
+            SpecialistDismissalReport.objects.get_or_create(**report)
 
         self.stdout.write(self.style.SUCCESS('Successfully populated the database with test data.'))

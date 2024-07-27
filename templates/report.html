@@ -1,17 +1,30 @@
-<!-- templates/report.html -->
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-    <title>Download Report</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Выбор периода</title>
 </head>
 <body>
-    <h1>Download Monthly Report</h1>
-    <form method="get" action="{% url 'download-report' %}">
-        <label for="start_month">Start Month:</label>
-        <input type="month" id="start_month" name="start_month">
-        <label for="end_month">End Month:</label>
-        <input type="month" id="end_month" name="end_month">
-        <button type="submit">Download</button>
+    <h1>Выберите период для скачивания отчета</h1>
+    <form action="{% url 'export-excel' %}" method="get">
+        <label for="period">Период:</label>
+        <select id="period" name="period">
+            <option value="январь-февраль">Январь-Февраль</option>
+            <option value="февраль-март">Февраль-Март</option>
+            <option value="март-апрель">Март-Апрель</option>
+            <option value="апрель-май">Апрель-Май</option>
+            <option value="май-июнь">Май-Июнь</option>
+            <option value="июнь-июль">Июнь-Июль</option>
+            <option value="июль-август">Июль-Август</option>
+            <option value="август-сентябрь">Август-Сентябрь</option>
+            <option value="сентябрь-октябрь">Сентябрь-Октябрь</option>
+            <option value="октябрь-ноябрь">Октябрь-Ноябрь</option>
+            <option value="ноябрь-декабрь">Ноябрь-Декабрь</option>
+            <option value="декабрь-январь">Декабрь-Январь</option>
+        </select>
+        <button type="submit">Скачать отчет</button>
     </form>
 </body>
 </html>
+

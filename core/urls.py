@@ -10,7 +10,8 @@ from .views import (
     Form2DetailView,
     Form3ListCreateView,
     Form3DetailView,
-    ExportExcelView
+    ExportExcelView,
+    ChoosePeriodView
 )
 
 urlpatterns = [

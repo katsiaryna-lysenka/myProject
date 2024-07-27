@@ -55,7 +55,6 @@ class Form2Serializer(serializers.ModelSerializer):
                 **organization_data  # Assuming ID is in the data for updating
             )
         else:
-            # Handle case where organization is not provided
             organization = None
 
         form2_instance = Form2.objects.create(organization=organization, **validated_data)
@@ -66,17 +65,14 @@ class Form2Serializer(serializers.ModelSerializer):
         if organization_data:
             org_id = organization_data.get('id')
             if org_id:
-                # Update existing organization
                 organization = Organization.objects.get(id=org_id)
                 for attr, value in organization_data.items():
                     setattr(organization, attr, value)
                 organization.save()
             else:
-                # Create new organization if no id is provided
                 organization = Organization.objects.create(**organization_data)
             instance.organization = organization
 
-        # Update other fields
         instance.start_date = validated_data.get('start_date', instance.start_date)
         instance.end_date = validated_data.get('end_date', instance.end_date)
         instance.save()
@@ -84,52 +80,25 @@ class Form2Serializer(serializers.ModelSerializer):
 
 
 class Form3Serializer(serializers.ModelSerializer):
-    form1 = Form1Serializer()
-    form2 = Form2Serializer()
+    form1 = serializers.PrimaryKeyRelatedField(queryset=Form1.objects.all())
+    form2 = serializers.PrimaryKeyRelatedField(queryset=Form2.objects.all())
+    modified_by = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
 
     class Meta:
         model = Form3
         fields = '__all__'
 
     def create(self, validated_data):
-        form1_data = validated_data.pop('form1')
-        form2_data = validated_data.pop('form2')
-
-        # Create Form1 instance
-        form1_instance = Form1.objects.create(**form1_data)
-
-        # Create Form2 instance
-        form2_instance = Form2Serializer().create(form2_data)  # Use Form2Serializer to create Form2
-
-        # Create Form3 instance
-        form3_instance = Form3.objects.create(
-            form1=form1_instance,
-            form2=form2_instance,
-            **validated_data
-        )
-
-        return form3_instance
+        return Form3.objects.create(**validated_data)
 
     def update(self, instance, validated_data):
-        form1_data = validated_data.pop('form1', None)
-        form2_data = validated_data.pop('form2', None)
-
-        # Update Form1 instance if provided
-        if form1_data:
-            form1_instance = instance.form1
-            for attr, value in form1_data.items():
-                setattr(form1_instance, attr, value)
-            form1_instance.save()
-
-        # Update Form2 instance if provided
-        if form2_data:
-            form2_instance = instance.form2
-            Form2Serializer().update(form2_instance, form2_data)  # Use Form2Serializer to update Form2
-
-        # Update Form3 instance fields
         instance.distribution_count = validated_data.get('distribution_count', instance.distribution_count)
-        instance.target_distribution_count = validated_data.get('target_distribution_count', instance.target_distribution_count)
+        instance.target_distribution_count = validated_data.get('target_distribution_count',
+                                                                instance.target_distribution_count)
         instance.modified_by = validated_data.get('modified_by', instance.modified_by)
-        instance.save()
 
+        instance.form1 = validated_data.get('form1', instance.form1)
+        instance.form2 = validated_data.get('form2', instance.form2)
+
+        instance.save()
         return instance

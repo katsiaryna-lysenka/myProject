@@ -82,15 +82,27 @@ class SpecialistDismissalReport(models.Model):
     organization_name = models.CharField(max_length=255)
     total_young_specialists = models.IntegerField(null=True, blank=True)
     commission_referred_total = models.IntegerField(null=True, blank=True)
+    commission_referred_target = models.IntegerField(null=True, blank=True)
+    commission_referred_distribution = models.IntegerField(null=True, blank=True)
     total_dismissed_specialists = models.IntegerField(null=True, blank=True)
     term_expired_total = models.IntegerField(null=True, blank=True)
+    term_expired_target = models.IntegerField(null=True, blank=True)
+    term_expired_distribution = models.IntegerField(null=True, blank=True)
     military_service_total = models.IntegerField(null=True, blank=True)
+    military_service_target = models.IntegerField(null=True, blank=True)
+    military_service_distribution = models.IntegerField(null=True, blank=True)
     education_institution_total = models.IntegerField(null=True, blank=True)
+    education_institution_target = models.IntegerField(null=True, blank=True)
+    education_institution_distribution = models.IntegerField(null=True, blank=True)
     relocation_total = models.IntegerField(null=True, blank=True)
+    relocation_target = models.IntegerField(null=True, blank=True)
+    relocation_distribution = models.IntegerField(null=True, blank=True)
     discrediting_circumstances_total = models.IntegerField(null=True, blank=True)
+    discrediting_circumstances_target = models.IntegerField(null=True, blank=True)
+    discrediting_circumstances_distribution = models.IntegerField(null=True, blank=True)
     housing_absence_total = models.IntegerField(null=True, blank=True)
-    rep_beg_period = models.DateField()
-    rep_end_period = models.DateField()
+    housing_absence_target = models.IntegerField(null=True, blank=True)
+    housing_absence_distribution = models.IntegerField(null=True, blank=True)
 
     class Meta:
         db_table = 'source_table'
@@ -104,15 +116,27 @@ class SpecialistDismissalReport(models.Model):
                 organization_name,
                 total_young_specialists,
                 commission_referred_total,
+                commission_referred_target,
+                commission_referred_distribution,
                 total_dismissed_specialists,
                 term_expired_total,
+                term_expired_target,
+                term_expired_distribution,
                 military_service_total,
+                military_service_target,
+                military_service_distribution,
                 education_institution_total,
+                education_institution_target,
+                education_institution_distribution,
                 relocation_total,
+                relocation_target,
+                relocation_distribution,
                 discrediting_circumstances_total,
+                discrediting_circumstances_target,
+                discrediting_circumstances_distribution,
                 housing_absence_total,
-                rep_beg_period,
-                rep_end_period
+                housing_absence_target,
+                housing_absence_distribution,
             FROM
                 source_table;
             """
