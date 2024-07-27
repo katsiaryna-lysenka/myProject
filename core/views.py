@@ -1,6 +1,7 @@
 from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.db.models import F, Value
 from .models import Organization, UserProfile, Form1, Form2, Form3, SpecialistDismissalReport
 from .serializers import OrganizationSerializer, UserProfileSerializer, Form1Serializer, Form2Serializer, Form3Serializer
 from django.http import HttpResponse, Http404
@@ -65,37 +66,109 @@ class ChoosePeriodView(APIView):
 
 class ExportExcelView(APIView):
     def get(self, request, format=None):
-
         period = request.GET.get('period', 'январь-январь')
 
-        data = list(
-            SpecialistDismissalReport.objects.values(
-                'organization_name',
-                'total_young_specialists',
-                'commission_referred_total',
-                'commission_referred_target',
-                'commission_referred_distribution',
-                'total_dismissed_specialists',
-                'term_expired_total',
-                'term_expired_target',
-                'term_expired_distribution',
-                'military_service_total',
-                'military_service_target',
-                'military_service_distribution',
-                'education_institution_total',
-                'education_institution_target',
-                'education_institution_distribution',
-                'relocation_total',
-                'relocation_target',
-                'relocation_distribution',
-                'discrediting_circumstances_total',
-                'discrediting_circumstances_target',
-                'discrediting_circumstances_distribution',
-                'housing_absence_total',
-                'housing_absence_target',
-                'housing_absence_distribution',
-            )
-        )
+        form3_objects = Form3.objects.select_related('form1')
+
+        total_fields = {
+            'total_young_specialists': 0,
+            'commission_referred_total': 0,
+            'commission_referred_target': 0,
+            'commission_referred_distribution': 0,
+            'total_dismissed_specialists': 0,
+            'term_expired_total': 0,
+            'term_expired_target': 0,
+            'term_expired_distribution': 0,
+            'military_service_total': 0,
+            'military_service_target': 0,
+            'military_service_distribution': 0,
+            'education_institution_total': 0,
+            'education_institution_target': 0,
+            'education_institution_distribution': 0,
+            'relocation_total': 0,
+            'relocation_target': 0,
+            'relocation_distribution': 0,
+            'discrediting_circumstances_total': 0,
+            'discrediting_circumstances_target': 0,
+            'discrediting_circumstances_distribution': 0,
+            'housing_absence_total': 0,
+            'housing_absence_target': 0,
+            'housing_absence_distribution': 0,
+        }
+
+        for form3 in form3_objects:
+            if form3.form1.article_name == 'направлен комиссией на основании':
+                total_fields['commission_referred_target'] += form3.distribution_count
+                total_fields['commission_referred_distribution'] += form3.target_distribution_count
+                total_fields[
+                    'commission_referred_total'] += form3.distribution_count + form3.target_distribution_count
+
+            if form3.form1.article_name == 'истечение срока обязательной отработки':
+                total_fields['term_expired_target'] += form3.distribution_count
+                total_fields['term_expired_distribution'] += form3.target_distribution_count
+                total_fields['term_expired_total'] += form3.distribution_count + form3.target_distribution_count
+
+            if form3.form1.article_name == 'призыв на срочную службу':
+                total_fields['military_service_target'] += form3.distribution_count
+                total_fields['military_service_distribution'] += form3.target_distribution_count
+                total_fields['military_service_total'] += form3.distribution_count + form3.target_distribution_count
+
+            if form3.form1.article_name == 'поступление в учреждения образования':
+                total_fields['education_institution_target'] += form3.distribution_count
+                total_fields['education_institution_distribution'] += form3.target_distribution_count
+                total_fields[
+                    'education_institution_total'] += form3.distribution_count + form3.target_distribution_count
+
+            if form3.form1.article_name == 'переезд в другую местность':
+                total_fields['relocation_target'] += form3.distribution_count
+                total_fields['relocation_distribution'] += form3.target_distribution_count
+                total_fields['relocation_total'] += form3.distribution_count + form3.target_distribution_count
+
+            if form3.form1.article_name == 'дискредитирующие обстоятельства':
+                total_fields['discrediting_circumstances_target'] += form3.distribution_count
+                total_fields['discrediting_circumstances_distribution'] += form3.target_distribution_count
+                total_fields[
+                    'discrediting_circumstances_total'] += form3.distribution_count + form3.target_distribution_count
+
+            if form3.form1.article_name == 'отсутствие жилья':
+                total_fields['housing_absence_target'] += form3.distribution_count
+                total_fields['housing_absence_distribution'] += form3.target_distribution_count
+                total_fields['housing_absence_total'] += form3.distribution_count + form3.target_distribution_count
+
+            if form3.form1.article_name == 'Общая численность молодых специалистов(рабочих)':
+                total_fields[
+                    'total_young_specialists'] += form3.distribution_count + form3.target_distribution_count
+
+            if form3.form1.article_name == 'Количество уволенных молодых специалистов':
+                total_fields[
+                    'total_dismissed_specialists'] += form3.distribution_count + form3.target_distribution_count
+
+        data = [{
+            'organization_name': 'Итого',
+            'total_young_specialists': total_fields['total_young_specialists'],
+            'commission_referred_total': total_fields['commission_referred_total'],
+            'commission_referred_target': total_fields['commission_referred_target'],
+            'commission_referred_distribution': total_fields['commission_referred_distribution'],
+            'total_dismissed_specialists': total_fields['total_dismissed_specialists'],
+            'term_expired_total': total_fields['term_expired_total'],
+            'term_expired_target': total_fields['term_expired_target'],
+            'term_expired_distribution': total_fields['term_expired_distribution'],
+            'military_service_total': total_fields['military_service_total'],
+            'military_service_target': total_fields['military_service_target'],
+            'military_service_distribution': total_fields['military_service_distribution'],
+            'education_institution_total': total_fields['education_institution_total'],
+            'education_institution_target': total_fields['education_institution_target'],
+            'education_institution_distribution': total_fields['education_institution_distribution'],
+            'relocation_total': total_fields['relocation_total'],
+            'relocation_target': total_fields['relocation_target'],
+            'relocation_distribution': total_fields['relocation_distribution'],
+            'discrediting_circumstances_total': total_fields['discrediting_circumstances_total'],
+            'discrediting_circumstances_target': total_fields['discrediting_circumstances_target'],
+            'discrediting_circumstances_distribution': total_fields['discrediting_circumstances_distribution'],
+            'housing_absence_total': total_fields['housing_absence_total'],
+            'housing_absence_target': total_fields['housing_absence_target'],
+            'housing_absence_distribution': total_fields['housing_absence_distribution']
+        }]
 
         output = self.export_to_excel(data, month=period)
         response = HttpResponse(output,
