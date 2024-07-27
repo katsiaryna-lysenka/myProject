@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "myproject"
+version = "0.1.0"
+description = ""
+authors = ["katsiaryna-lysenka <katya.lysenko.1999@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11.6"
+django = "^5.0.7"
+djangorestframework = "^3.15.2"
+psycopg2-binary = "^2.9.9"
+drf-yasg = "^1.21.7"
+xlsxwriter = "^3.2.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+

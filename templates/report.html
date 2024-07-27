@@ -1,0 +1,17 @@
+<!-- templates/report.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Download Report</title>
+</head>
+<body>
+    <h1>Download Monthly Report</h1>
+    <form method="get" action="{% url 'download-report' %}">
+        <label for="start_month">Start Month:</label>
+        <input type="month" id="start_month" name="start_month">
+        <label for="end_month">End Month:</label>
+        <input type="month" id="end_month" name="end_month">
+        <button type="submit">Download</button>
+    </form>
+</body>
+</html>
